@@ -15,21 +15,17 @@
 package cmd
 
 import (
-	"context"
-	"net"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/MakeNowJust/heredoc"
+	"github.com/binarly-io/atlas/pkg/controller"
 	log "github.com/sirupsen/logrus"
 	cmd "github.com/spf13/cobra"
 	conf "github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"net"
 
+	"github.com/binarly-io/atlas/pkg/ainit"
 	"github.com/binarly-io/atlas/pkg/api/atlas"
 	atlas_health "github.com/binarly-io/atlas/pkg/api/health"
-	"github.com/binarly-io/atlas/pkg/controller"
 	"github.com/binarly-io/atlas/pkg/controller/service"
 	"github.com/binarly-io/atlas/pkg/transport/service"
 
@@ -60,20 +56,12 @@ var serveCmd = &cmd.Command{
 	Run: func(cmd *cmd.Command, args []string) {
 		//filename := args[0]
 
-		// Set OS signals and termination context
-		ctx, cancelFunc := context.WithCancel(context.Background())
-		stopChan := make(chan os.Signal, 2)
-		signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			<-stopChan
-			cancelFunc()
-			<-stopChan
-			os.Exit(1)
-		}()
+		// Init termination context
+		ctx := ainit.ContextInit()
 
 		log.Infof("Starting service. Version:%s GitSHA:%s BuiltAt:%s\n", softwareid.Version, softwareid.GitSHA, softwareid.BuiltAt)
 
-		controller.Init()
+		serverInit()
 
 		log.Infof("Listening on %s", serviceAddress)
 		listener, err := net.Listen("tcp", serviceAddress)
@@ -81,19 +69,20 @@ var serveCmd = &cmd.Command{
 			log.Fatalf("failed to Listen() %v", err)
 		}
 
+		// Create gRPC server
 		grpcServer := grpc.NewServer(service_transport.GetGRPCServerOptions(tls, auth, tlsCertFile, tlsKeyFile, jwtPublicKeyFile)...)
-		atlas.RegisterControlPlaneServer(grpcServer, controller_service.NewControlPlaneServer())
-		atlas_health.RegisterHealthServer(grpcServer, controller_service.NewHealthServer())
+		serverRegister(grpcServer)
 
+		// Serve gRPC requests
 		go func() {
 			if err := grpcServer.Serve(listener); err != nil {
 				log.Fatalf("failed to Serve() %v", err)
 			}
 		}()
 
-		go controller_service.IncomingCommandsHandler(controller_service.GetIncomingQueue(), controller_service.GetOutgoingQueue())
+		serverRun()
 
-		<-ctx.Done()
+		ainit.ContextWait(ctx)
 	},
 }
 
@@ -104,4 +93,20 @@ func init() {
 	}
 
 	rootCmd.AddCommand(serveCmd)
+}
+
+// serverInit initializes all server internals
+func serverInit() {
+	controller.Init()
+}
+
+// serverRegister registers Atlas servers with gRPC server
+func serverRegister(grpcServer *grpc.Server) {
+	atlas.RegisterControlPlaneServer(grpcServer, controller_service.NewControlPlaneServer())
+	atlas_health.RegisterHealthServer(grpcServer, controller_service.NewHealthServer())
+}
+
+// serverRun runs additional - non-rRPC-functions
+func serverRun() {
+	go controller_service.IncomingCommandsHandler(controller_service.GetIncomingQueue(), controller_service.GetOutgoingQueue())
 }
