@@ -54,12 +54,7 @@ type ConfigService struct {
 	// IMPORTANT
 }
 
-var Config ConfigService
-
-func ReadIn() {
-	_ = conf.Unmarshal(&Config)
-}
-
+// String returns string representation of the configuration
 func (c *ConfigService) String() string {
 	b := &bytes.Buffer{}
 
@@ -83,4 +78,12 @@ func (c *ConfigService) String() string {
 	_, _ = fmt.Fprintf(b, "Secure: %v\n", c.Secure)
 
 	return b.String()
+}
+
+// Config is the configuration
+var Config ConfigService
+
+// ReadIn reads all specified configuration sources and builds final aggregated configuration
+func ReadIn() {
+	_ = conf.Unmarshal(&Config)
 }
