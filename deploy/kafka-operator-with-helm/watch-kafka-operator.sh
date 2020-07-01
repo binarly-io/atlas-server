@@ -1,3 +1,3 @@
 #!/bin/bash
 
-watch "kubectl -n kafka get all"
+watch "kubectl -n kafka get all,pvc,pv"
