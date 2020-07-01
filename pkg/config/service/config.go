@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	conf "github.com/spf13/viper"
+
+	"github.com/binarly-io/atlas/pkg/api/atlas"
 )
 
 // IMPORTANT
@@ -39,11 +41,12 @@ type ConfigService struct {
 	OAuth            bool   `mapstructure:"oauth"`
 	JWTPublicKeyFile string `mapstructure:"jwt-public-key-file"`
 
-	// Kafka
+	// Kafka connection
 	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
+	// Kafka internals
+	Topic string `mapstructure:"topic"`
 
-	// MinIO
+	// MinIO connection
 	Endpoint        string `mapstructure:"endpoint"`
 	AccessKeyID     string `mapstructure:"accessKeyID"`
 	SecretAccessKey string `mapstructure:"secretAccessKey"`
@@ -86,4 +89,35 @@ var Config ConfigService
 // ReadIn reads all specified configuration sources and builds final aggregated configuration
 func ReadIn() {
 	_ = conf.Unmarshal(&Config)
+}
+
+// Interfaces
+
+// Implement config.MinIOEndpointConfig interface
+
+// Part of config.MinIOEndpointConfig interface
+func (c *ConfigService) GetMinIOEndpoint() string {
+	return c.Endpoint
+}
+
+// Part of config.MinIOEndpointConfig interface
+func (c *ConfigService) GetMinIOAccessKeyID() string {
+	return c.AccessKeyID
+}
+
+// Part of config.MinIOEndpointConfig interface
+func (c *ConfigService) GetMinIOSecretAccessKey() string {
+	return c.SecretAccessKey
+}
+
+// Part of config.MinIOEndpointConfig interface
+func (c *ConfigService) GetMinIOSecure() bool {
+	return c.Secure
+}
+
+// Implement config.KafkaEndpointConfig interface
+
+// Part of config.KafkaEndpointConfig interface
+func (c *ConfigService) GetKafkaEndpoint() *atlas.KafkaEndpoint {
+	return atlas.NewKafkaEndpoint(c.Brokers)
 }
