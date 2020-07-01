@@ -1,3 +1,3 @@
 #!/bin/bash
 
-watch "kubectl -n cert-manager get all"
+watch "kubectl -n cert-manager get all,pvc,pv"
