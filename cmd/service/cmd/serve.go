@@ -15,15 +15,16 @@
 package cmd
 
 import (
+	"net"
+
 	"github.com/MakeNowJust/heredoc"
-	"github.com/binarly-io/atlas/pkg/controller"
 	log "github.com/sirupsen/logrus"
 	cmd "github.com/spf13/cobra"
 	conf "github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"net"
 
-	"github.com/binarly-io/atlas/pkg/ainit"
+	"github.com/binarly-io/atlas/pkg/controller"
+	"github.com/binarly-io/atlas/pkg/app"
 	"github.com/binarly-io/atlas/pkg/api/atlas"
 	atlas_health "github.com/binarly-io/atlas/pkg/api/health"
 	"github.com/binarly-io/atlas/pkg/controller/service"
@@ -57,7 +58,7 @@ var serveCmd = &cmd.Command{
 		//filename := args[0]
 
 		// Init termination context
-		ctx := ainit.ContextInit()
+		ctx := app.ContextInit()
 
 		log.Infof("Starting service. Version:%s GitSHA:%s BuiltAt:%s\n", softwareid.Version, softwareid.GitSHA, softwareid.BuiltAt)
 
@@ -82,7 +83,7 @@ var serveCmd = &cmd.Command{
 
 		serverRun()
 
-		ainit.ContextWait(ctx)
+		app.ContextWait(ctx)
 	},
 }
 
